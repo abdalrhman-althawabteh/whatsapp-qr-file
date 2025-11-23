@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webhook Settings - WhatsApp Manager</title>
+    <link rel="stylesheet" href="navigation.css">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .webhook-container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        .webhook-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .webhook-card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: monospace;
+        }
+
+        .form-group input:focus {
+            border-color: #667eea;
+            outline: none;
+        }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 30px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #667eea;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(30px);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-test {
+            background: #25D366;
+            color: white;
+        }
+
+        .btn-test:hover {
+            background: #1da851;
+            transform: translateY(-2px);
+        }
+
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin: 15px 0;
+            position: relative;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 6px 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .copy-btn:hover {
+            background: #5568d3;
+        }
+
+        .success-msg {
+            background: #efe;
+            color: #3c3;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .warning-msg {
+            background: #ffeaa7;
+            color: #d63031;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Navigation Sidebar -->
+        <nav class="navigation-sidebar">
+            <div class="nav-logo">💬</div>
+            
+            <div class="user-badge" title="Your Account">👤</div>
+            
+            <div class="nav-items">
+                <a href="/dashboard.html" class="nav-item">
+                    <div class="nav-icon">🏠</div>
+                    <div class="nav-label">Home</div>
+                </a>
+                
+                <a href="/messages.html" class="nav-item">
+                    <div class="nav-icon">💬</div>
+                    <div class="nav-label">Messages</div>
+                </a>
+                
+                <a href="/webhooks.html" class="nav-item active">
+                    <div class="nav-icon">🔗</div>
+                    <div class="nav-label">Webhooks</div>
+                </a>
+            </div>
+            
+            <div class="nav-bottom">
+                <a href="/settings.html" class="nav-item">
+                    <div class="nav-icon">⚙️</div>
+                    <div class="nav-label">Settings</div>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="webhook-container">
+                <!-- Incoming Webhook Configuration -->
+                <div class="webhook-card">
+                    <h2>📥 Incoming Webhook (Receive Messages)</h2>
+                    <p style="color: #666; margin-bottom: 20px;">
+                        Receive WhatsApp messages automatically in your automation tool (n8n, Make.com, Zapier, etc.)
+                    </p>
+
+                    <div class="toggle-switch">
+                        <label class="switch">
+                            <input type="checkbox" id="webhook-enabled">
+                            <span class="slider"></span>
+                        </label>
+                        <span style="font-weight: 600;">Enable Webhook</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Your Webhook URL</label>
+                        <input type="url" id="webhook-url" placeholder="https://your-n8n-instance.com/webhook/whatsapp">
+                        <small style="color: #999;">Paste your n8n/Make.com webhook URL here</small>
+                    </div>
+
+                    <button onclick="saveWebhook()" class="btn btn-primary">💾 Save Configuration</button>
+                    <button onclick="testWebhook()" class="btn btn-test">🧪 Send Test</button>
+
+                    <div id="save-message" style="display: none;"></div>
+
+                    <div style="margin-top: 30px;">
+                        <h3>📖 Webhook Payload Example:</h3>
+                        <div class="code-block">
+{
+  "event": "message_received",
+  "timestamp": "2025-11-19T10:30:00Z",
+  "data": {
+    "id": "message-id",
+    "from": "962799072326@c.us",
+    "to": "your-number@c.us",
+    "body": "Hello!",
+    "timestamp": 1700392200,
+    "fromMe": false,
+    "hasMedia": false,
+    "chatName": "John Doe"
+  }
+}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Outgoing Webhook Documentation -->
+                <div class="webhook-card">
+                    <h2>📤 Outgoing Webhook (Send Messages)</h2>
+                    <p style="color: #666; margin-bottom: 20px;">
+                        Send WhatsApp messages by making HTTP POST requests to this URL
+                    </p>
+
+                    <div class="form-group">
+                        <label>Your Webhook URL (for sending messages)</label>
+                        <input type="text" id="outgoing-webhook-url" readonly>
+                        <button onclick="copyToClipboard('outgoing-webhook-url')" class="copy-btn">📋 Copy</button>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Your Secret Token</label>
+                        <input type="text" id="webhook-secret" readonly>
+                        <button onclick="copyToClipboard('webhook-secret')" class="copy-btn">📋 Copy</button>
+                    </div>
+
+                    <div class="warning-msg">
+                        ⚠️ <strong>Important:</strong> Keep your secret token safe! Anyone with this token can send messages through your WhatsApp.
+                    </div>
+
+                    <div style="margin-top: 30px;">
+                        <h3>📖 How to Send Messages (cURL Example):</h3>
+                        <div class="code-block" id="curl-example" style="padding-right: 80px;">
+curl -X POST [YOUR-WEBHOOK-URL] \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "962799072326",
+    "message": "Hello from n8n!",
+    "secret": "[YOUR-SECRET]"
+  }'
+                            <button onclick="copyCodeBlock('curl-example')" class="copy-btn">📋 Copy</button>
+                        </div>
+
+                        <h3 style="margin-top: 30px;">📖 n8n HTTP Request Node Configuration:</h3>
+                        <div class="code-block">
+Method: POST
+URL: [Your Webhook URL from above]
+
+Body (JSON):
+{
+  "to": "{{ $json.phoneNumber }}",
+  "message": "{{ $json.message }}",
+  "secret": "[Your Secret Token]"
+}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+        const SUPABASE_URL = 'https://pdcpvrirvslhxiekwkpw.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkY3B2cmlydnNsaHhpZWt3a3B3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM3MTA3MDQsImV4cCI6MjA3OTI4NjcwNH0.wjAj1EfaOwLYKYw3_By7hIY8O8wJnZFrBEMdXARB_iI';
+
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let currentSession = null;
+
+        async function init() {
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (!session) {
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            currentSession = session;
+            loadWebhookConfig();
+        }
+
+        async function loadWebhookConfig() {
+            try {
+                const response = await fetch('/webhook/config', {
+                    headers: {
+                        'Authorization': `Bearer ${currentSession.access_token}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('webhook-url').value = data.webhook_url || '';
+                    document.getElementById('webhook-enabled').checked = data.webhook_enabled || false;
+                    document.getElementById('outgoing-webhook-url').value = data.outgoing_webhook_url || '';
+                    document.getElementById('webhook-secret').value = data.webhook_secret || '';
+
+                    // Update curl example
+                    const curlExample = document.getElementById('curl-example');
+                    const copyBtn = curlExample.querySelector('.copy-btn');
+                    curlExample.textContent = `curl -X POST ${data.outgoing_webhook_url || '[YOUR-WEBHOOK-URL]'} \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "to": "962799072326",
+    "message": "Hello from n8n!",
+    "secret": "${data.webhook_secret || '[YOUR-SECRET]'}"
+  }'`;
+                    curlExample.appendChild(copyBtn);
+                }
+            } catch (error) {
+                console.error('Error loading webhook config:', error);
+            }
+        }
+
+        window.saveWebhook = async function() {
+            try {
+                const webhookUrl = document.getElementById('webhook-url').value;
+                const webhookEnabled = document.getElementById('webhook-enabled').checked;
+
+                const response = await fetch('/webhook/config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentSession.access_token}`
+                    },
+                    body: JSON.stringify({
+                        webhook_url: webhookUrl,
+                        webhook_enabled: webhookEnabled
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const msg = document.getElementById('save-message');
+                    msg.className = 'success-msg';
+                    msg.textContent = '✅ Webhook configuration saved successfully!';
+                    msg.style.display = 'block';
+
+                    // Reload config to get new secret
+                    await loadWebhookConfig();
+
+                    setTimeout(() => {
+                        msg.style.display = 'none';
+                    }, 5000);
+                } else {
+                    alert('Failed to save webhook configuration');
+                }
+            } catch (error) {
+                console.error('Error saving webhook:', error);
+                alert('Error saving webhook configuration');
+            }
+        };
+
+        window.testWebhook = async function() {
+            try {
+                const response = await fetch('/webhook/test', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${currentSession.access_token}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ Test webhook sent! Check your automation tool.');
+                } else {
+                    alert('❌ Failed to send test webhook');
+                }
+            } catch (error) {
+                console.error('Error testing webhook:', error);
+                alert('Error sending test webhook');
+            }
+        };
+
+        window.copyToClipboard = function(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.value || element.textContent;
+
+            navigator.clipboard.writeText(text).then(() => {
+                alert('✅ Copied to clipboard!');
+            });
+        };
+
+        window.copyCodeBlock = function(elementId) {
+            const element = document.getElementById(elementId);
+            // Get text content but exclude the button
+            let text = '';
+            element.childNodes.forEach(node => {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    text += node.textContent;
+                }
+            });
+
+            navigator.clipboard.writeText(text.trim()).then(() => {
+                alert('✅ Copied to clipboard!');
+            });
+        };
+
+        init();
+    </script>
+</body>
+</html>

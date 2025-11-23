@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages - WhatsApp Manager</title>
+    <link rel="stylesheet" href="navigation.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Add Navigation -->
+    <div class="app-layout">
+        <nav class="navigation-sidebar">
+            <div class="nav-logo">💬</div>
+            
+            <div class="user-badge" title="Your Account">👤</div>
+            
+            <div class="nav-items">
+                <a href="/dashboard.html" class="nav-item">
+                    <div class="nav-icon">🏠</div>
+                    <div class="nav-label">Home</div>
+                </a>
+                
+                <a href="/messages.html" class="nav-item active">
+                    <div class="nav-icon">💬</div>
+                    <div class="nav-label">Messages</div>
+                </a>
+                
+                <a href="/webhooks.html" class="nav-item">
+                    <div class="nav-icon">🔗</div>
+                    <div class="nav-label">Webhooks</div>
+                </a>
+            </div>
+            
+            <div class="nav-bottom">
+                <a href="/settings.html" class="nav-item">
+                    <div class="nav-icon">⚙️</div>
+                    <div class="nav-label">Settings</div>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content Wrapper -->
+        <div class="main-content" style="display: flex; flex-direction: column;">
+    <!-- QR Code Screen (shows first) -->
+    <div id="qr-screen" class="screen active">
+        <div class="container">
+            <h1>🔗 WhatsApp Connection</h1>
+            
+            <div id="status" class="status disconnected">
+                <span class="dot"></span>
+                <span id="status-text">Disconnected</span>
+            </div>
+
+            <div id="qr-container" class="qr-box">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Generating QR Code...</p>
+                </div>
+                <img id="qr-image" src="" alt="QR Code" style="display: none;">
+            </div>
+
+            <div class="instructions">
+                <h3>📋 How to connect:</h3>
+                <ol>
+                    <li>Open WhatsApp on your phone</li>
+                    <li>Tap Menu (⋮) or Settings</li>
+                    <li>Tap Linked Devices</li>
+                    <li>Tap Link a Device</li>
+                    <li>Scan this QR code</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chats Screen (shows after connection) -->
+    <div id="chats-screen" class="screen">
+        <div class="app-container">
+            <!-- Sidebar with chat list -->
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <h2>💬 Chats</h2>
+                    <button id="refresh-btn" class="refresh-btn">🔄</button>
+                    <button id="webhook-settings-btn" class="refresh-btn" title="Webhook Settings">🔗</button>
+                </div>
+                <div class="user-info-panel">
+                    <div class="user-details">
+                        <span class="user-icon">👤</span>
+                        <span id="user-email" class="user-email">Loading...</span>
+                    </div>
+                    <button id="logout-btn" class="logout-btn">🚪 Logout</button>
+                </div>
+                <div id="chat-list" class="chat-list">
+                    <!-- Chats will appear here -->
+                </div>
+            </div>
+
+            <!-- Main chat area -->
+            <div class="main-area">
+                <div class="welcome">
+                    <h2>👋 Welcome to WhatsApp Web</h2>
+                    <p>Select a chat from the left to view messages</p>
+                </div>
+                
+                <div id="chat-view" class="chat-view" style="display: none;">
+                    <div class="chat-header">
+                        <h3 id="chat-name">Chat Name</h3>
+                    </div>
+                    <div id="messages-container" class="messages-container">
+                        <!-- Messages will appear here -->
+                    </div>
+                    
+                    <!-- Message input area -->
+                    <div class="message-input-area">
+                        <!-- File input (hidden) -->
+                        <input 
+                            type="file" 
+                            id="file-input" 
+                            accept="image/jpeg,image/jpg,image/png,image/gif,video/mp4,audio/*,.pdf,.doc,.docx,.txt,.zip"
+                            style="display: none;"
+                        >
+                        
+                        <!-- Attach button -->
+                        <button id="attach-btn" class="attach-btn" title="Attach file">
+                            📎
+                        </button>
+                        
+                        <!-- Text input -->
+                        <input 
+                            type="text" 
+                            id="message-input" 
+                            placeholder="Type a message..."
+                            autocomplete="off"
+                        >
+                        
+                        <!-- Send button -->
+                        <button id="send-btn" class="send-btn">
+                            <svg viewBox="0 0 24 24" width="24" height="24">
+                                <path fill="currentColor" d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <!-- File preview area -->
+                    <div id="file-preview" class="file-preview" style="display: none;">
+                        <div class="file-preview-content">
+                            <div class="file-preview-header">
+                                <span>Selected File:</span>
+                                <button id="cancel-file-btn" class="cancel-btn">✕</button>
+                            </div>
+                            <div id="file-preview-display" class="file-preview-display">
+                                <!-- File preview will appear here -->
+                            </div>
+                            <input 
+                                type="text" 
+                                id="caption-input" 
+                                placeholder="Add a caption (optional)..."
+                                autocomplete="off"
+                            >
+                            <button id="send-file-btn" class="send-file-btn">
+                                Send File 📤
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+   </div> <!-- Close main-content -->
+    </div> <!-- Close app-layout -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>

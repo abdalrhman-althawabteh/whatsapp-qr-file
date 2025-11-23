@@ -1,0 +1,104 @@
+/* Navigation Styles */
+.app-layout {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+    background: #f5f5f5;
+}
+
+.navigation-sidebar {
+    width: 80px;
+    background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 0;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+}
+
+.nav-logo {
+    font-size: 36px;
+    margin-bottom: 40px;
+    cursor: pointer;
+}
+
+.nav-items {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 15px;
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    transition: all 0.3s;
+    position: relative;
+    cursor: pointer;
+}
+
+.nav-item:hover {
+    color: white;
+    background: rgba(255,255,255,0.1);
+}
+
+.nav-item.active {
+    color: white;
+    background: rgba(255,255,255,0.2);
+}
+
+.nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 40px;
+    background: white;
+    border-radius: 0 4px 4px 0;
+}
+
+.nav-icon {
+    font-size: 28px;
+    margin-bottom: 5px;
+}
+
+.nav-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.nav-bottom {
+    margin-top: auto;
+}
+
+.main-content {
+    flex: 1;
+    overflow: auto;
+    background: white;
+}
+
+/* User Badge */
+.user-badge {
+    background: rgba(255,255,255,0.15);
+    color: white;
+    padding: 10px;
+    border-radius: 50%;
+    font-size: 20px;
+    margin-bottom: 20px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.user-badge:hover {
+    background: rgba(255,255,255,0.25);
+    transform: scale(1.1);
+}

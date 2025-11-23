@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - WhatsApp Manager</title>
+    <link rel="stylesheet" href="navigation.css">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .settings-container {
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .settings-header {
+            margin-bottom: 40px;
+        }
+
+        .settings-header h1 {
+            font-size: 32px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .settings-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .settings-card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .user-info {
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .user-info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .user-info-row:last-child {
+            border-bottom: none;
+        }
+
+        .user-info-label {
+            font-weight: 600;
+            color: #666;
+        }
+
+        .user-info-value {
+            color: #333;
+        }
+
+        .danger-zone {
+            border: 2px solid #fee;
+            background: #fff5f5;
+        }
+
+        .danger-zone h2 {
+            color: #f44;
+        }
+
+        .logout-btn {
+            width: 100%;
+            padding: 15px;
+            background: #f44;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #d33;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
+        }
+
+        .disconnect-btn {
+            width: 100%;
+            padding: 15px;
+            background: #ff9800;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+        }
+
+        .disconnect-btn:hover {
+            background: #f57c00;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Navigation Sidebar -->
+        <nav class="navigation-sidebar">
+            <div class="nav-logo">💬</div>
+            
+            <div class="user-badge" title="Your Account">👤</div>
+            
+            <div class="nav-items">
+                <a href="/dashboard.html" class="nav-item">
+                    <div class="nav-icon">🏠</div>
+                    <div class="nav-label">Home</div>
+                </a>
+                
+                <a href="/messages.html" class="nav-item">
+                    <div class="nav-icon">💬</div>
+                    <div class="nav-label">Messages</div>
+                </a>
+                
+                <a href="/webhooks.html" class="nav-item">
+                    <div class="nav-icon">🔗</div>
+                    <div class="nav-label">Webhooks</div>
+                </a>
+            </div>
+            
+            <div class="nav-bottom">
+                <a href="/settings.html" class="nav-item active">
+                    <div class="nav-icon">⚙️</div>
+                    <div class="nav-label">Settings</div>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="settings-container">
+                <div class="settings-header">
+                    <h1>⚙️ Settings</h1>
+                </div>
+
+                <!-- Account Info -->
+                <div class="settings-card">
+                    <h2>👤 Account Information</h2>
+                    <div class="user-info">
+                        <div class="user-info-row">
+                            <span class="user-info-label">Email:</span>
+                            <span class="user-info-value" id="user-email">Loading...</span>
+                        </div>
+                        <div class="user-info-row">
+                            <span class="user-info-label">User ID:</span>
+                            <span class="user-info-value" id="user-id">Loading...</span>
+                        </div>
+                        <div class="user-info-row">
+                            <span class="user-info-label">Account Created:</span>
+                            <span class="user-info-value" id="created-at">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Danger Zone -->
+                <div class="settings-card danger-zone">
+                    <h2>⚠️ Danger Zone</h2>
+                    <p style="color: #666; margin-bottom: 20px;">
+                        These actions will disconnect your WhatsApp or log you out of the system.
+                    </p>
+                    
+                    <button class="disconnect-btn" onclick="disconnectWhatsApp()">
+                        🔌 Disconnect WhatsApp
+                    </button>
+                    
+                    <button class="logout-btn" onclick="logout()">
+                        🚪 Logout from Account
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+        const SUPABASE_URL = 'https://pdcpvrirvslhxiekwkpw.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkY3B2cmlydnNsaHhpZWt3a3B3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM3MTA3MDQsImV4cCI6MjA3OTI4NjcwNH0.wjAj1EfaOwLYKYw3_By7hIY8O8wJnZFrBEMdXARB_iI';
+
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let currentSession = null;
+
+        async function init() {
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (!session) {
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            currentSession = session;
+            
+            // Display user info
+            document.getElementById('user-email').textContent = session.user.email;
+            document.getElementById('user-id').textContent = session.user.id;
+            
+            const createdDate = new Date(session.user.created_at);
+            document.getElementById('created-at').textContent = createdDate.toLocaleDateString();
+        }
+
+        window.disconnectWhatsApp = async function() {
+            if (confirm('Are you sure you want to disconnect WhatsApp? You will need to scan the QR code again.')) {
+                try {
+                    await fetch('/logout-whatsapp', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${currentSession.access_token}`
+                        }
+                    });
+                    
+                    alert('✅ WhatsApp disconnected successfully!');
+                    window.location.href = '/dashboard.html';
+                } catch (error) {
+                    console.error('Error disconnecting WhatsApp:', error);
+                    alert('❌ Error disconnecting WhatsApp');
+                }
+            }
+        };
+
+        window.logout = async function() {
+            if (confirm('Are you sure you want to logout from the website?\n\nYour WhatsApp will remain connected.')) {
+                try {
+                    // Just logout from Supabase - DON'T disconnect WhatsApp!
+                    await supabase.auth.signOut();
+                    window.location.href = '/login.html';
+                } catch (error) {
+                    console.error('Error logging out:', error);
+                    await supabase.auth.signOut();
+                    window.location.href = '/login.html';
+                }
+            }
+        };
+
+        init();
+    </script>
+</body>
+</html>

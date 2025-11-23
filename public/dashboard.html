@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - WhatsApp Manager</title>
+    <link rel="stylesheet" href="navigation.css">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .dashboard-container {
+            padding: 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .dashboard-header {
+            margin-bottom: 40px;
+        }
+
+        .dashboard-header h1 {
+            font-size: 32px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .dashboard-header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2);
+        }
+
+        .stat-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .quick-actions {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .quick-actions h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .action-btn {
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            text-decoration: none;
+            color: #333;
+        }
+
+        .action-btn:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+            transform: translateY(-2px);
+        }
+
+        .action-btn-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .action-btn-label {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 40px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ccc;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: #25D366;
+        }
+
+        .status-dot.disconnected {
+            background: #f44;
+        }
+
+        .status-text {
+            font-weight: 600;
+            color: #333;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Navigation Sidebar -->
+        <nav class="navigation-sidebar">
+            <div class="nav-logo">💬</div>
+            
+            <div class="user-badge" title="Your Account">👤</div>
+            
+            <div class="nav-items">
+                <a href="/dashboard.html" class="nav-item active">
+                    <div class="nav-icon">🏠</div>
+                    <div class="nav-label">Home</div>
+                </a>
+                
+                <a href="/messages.html" class="nav-item">
+                    <div class="nav-icon">💬</div>
+                    <div class="nav-label">Messages</div>
+                </a>
+                
+                <a href="/webhooks.html" class="nav-item">
+                    <div class="nav-icon">🔗</div>
+                    <div class="nav-label">Webhooks</div>
+                </a>
+            </div>
+            
+            <div class="nav-bottom">
+                <a href="/settings.html" class="nav-item">
+                    <div class="nav-icon">⚙️</div>
+                    <div class="nav-label">Settings</div>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="dashboard-container">
+                <div class="dashboard-header">
+                    <h1>Welcome back! 👋</h1>
+                    <p id="user-email">Loading...</p>
+                </div>
+
+                <!-- Connection Status -->
+                <div class="connection-status">
+                    <div class="status-dot" id="status-indicator"></div>
+                    <span class="status-text" id="connection-status">Checking connection...</span>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">💬</div>
+                        <div class="stat-value" id="total-chats">0</div>
+                        <div class="stat-label">Total Chats</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">📩</div>
+                        <div class="stat-value" id="unread-messages">0</div>
+                        <div class="stat-label">Unread Messages</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">🔗</div>
+                        <div class="stat-value" id="webhook-status">OFF</div>
+                        <div class="stat-label">Webhook Status</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">⚡</div>
+                        <div class="stat-value">Active</div>
+                        <div class="stat-label">Connection</div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <h2>Quick Actions</h2>
+                    <div class="action-buttons">
+                        <a href="/messages.html" class="action-btn">
+                            <div class="action-btn-icon">💬</div>
+                            <div class="action-btn-label">Open Messages</div>
+                        </a>
+
+                        <a href="/webhooks.html" class="action-btn">
+                            <div class="action-btn-icon">🔗</div>
+                            <div class="action-btn-label">Setup Webhooks</div>
+                        </a>
+
+                        <a href="/settings.html" class="action-btn">
+                            <div class="action-btn-icon">⚙️</div>
+                            <div class="action-btn-label">Settings</div>
+                        </a>
+
+                        <a href="#" onclick="refreshConnection()" class="action-btn">
+                            <div class="action-btn-icon">🔄</div>
+                            <div class="action-btn-label">Refresh Status</div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+        const SUPABASE_URL = 'https://pdcpvrirvslhxiekwkpw.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkY3B2cmlydnNsaHhpZWt3a3B3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM3MTA3MDQsImV4cCI6MjA3OTI4NjcwNH0.wjAj1EfaOwLYKYw3_By7hIY8O8wJnZFrBEMdXARB_iI';
+
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let currentSession = null;
+
+        async function init() {
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (!session) {
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            currentSession = session;
+            document.getElementById('user-email').textContent = session.user.email;
+            
+            loadDashboardData();
+        }
+
+        async function loadDashboardData() {
+            try {
+                // Get connection status
+                const statusResponse = await fetch('/qr', {
+                    headers: {
+                        'Authorization': `Bearer ${currentSession.access_token}`
+                    }
+                });
+                const statusData = await statusResponse.json();
+
+                const statusIndicator = document.getElementById('status-indicator');
+                const statusText = document.getElementById('connection-status');
+
+                if (statusData.ready) {
+                    statusIndicator.classList.add('connected');
+                    statusText.textContent = 'WhatsApp Connected';
+                } else {
+                    statusIndicator.classList.add('disconnected');
+                    statusText.textContent = 'WhatsApp Disconnected - Scan QR Code';
+                }
+
+                // Get chats
+                const chatsResponse = await fetch('/chats', {
+                    headers: {
+                        'Authorization': `Bearer ${currentSession.access_token}`
+                    }
+                });
+                const chatsData = await chatsResponse.json();
+
+                document.getElementById('total-chats').textContent = chatsData.chats?.length || 0;
+                
+                const unreadCount = chatsData.chats?.reduce((sum, chat) => sum + (chat.unreadCount || 0), 0) || 0;
+                document.getElementById('unread-messages').textContent = unreadCount;
+
+                // Get webhook status
+                const webhookResponse = await fetch('/webhook/config', {
+                    headers: {
+                        'Authorization': `Bearer ${currentSession.access_token}`
+                    }
+                });
+                const webhookData = await webhookResponse.json();
+
+                document.getElementById('webhook-status').textContent = webhookData.webhook_enabled ? 'ON' : 'OFF';
+
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        window.refreshConnection = function() {
+            loadDashboardData();
+        };
+
+        init();
+    </script>
+</body>
+</html>

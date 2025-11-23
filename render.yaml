@@ -1,0 +1,75 @@
+# ============================================
+# Render Blueprint Configuration
+# ============================================
+
+services:
+  - type: web
+    name: whatsapp-manager
+    env: node
+    region: oregon  # أو singapore إذا كنت في آسيا
+    plan: free  # أو starter للـ $7/month
+    
+    # Build Settings
+    buildCommand: npm install
+    startCommand: npm start
+    
+    # Auto Deploy
+    branch: main
+    autoDeploy: true
+    
+    # Health Check
+    healthCheckPath: /health
+    
+    # Environment Variables
+    envVars:
+      - key: NODE_ENV
+        value: production
+      
+      - key: PORT
+        value: 8080
+      
+      # Supabase (سيتم إضافتها يدوياً في Dashboard)
+      - key: SUPABASE_URL
+        sync: false
+      
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      
+      # Session Secret (auto-generate)
+      - key: SESSION_SECRET
+        generateValue: true
+      
+      - key: FRONTEND_URL
+        value: https://whatsapp-manager.onrender.com
+    
+    # Persistent Disk (للـ Paid plan فقط)
+    # Uncomment هذا إذا استخدمت Starter plan أو أعلى
+    # disk:
+    #   name: whatsapp-sessions
+    #   mountPath: /opt/render/project/src/.wwebjs_auth
+    #   sizeGB: 1
+
+# ============================================
+# Notes:
+# ============================================
+# 
+# 1. Free Plan Limitations:
+#    - Sleeps after 15 minutes of inactivity
+#    - 512MB RAM
+#    - No persistent disk
+#    - WhatsApp sessions will be lost on restart
+#
+# 2. Starter Plan ($7/mo):
+#    - Always on (no sleep)
+#    - 512MB RAM
+#    - Persistent disk available
+#    - Better for production
+#
+# 3. To upgrade:
+#    - Change plan: free → starter
+#    - Uncomment disk section above
+#
+# ============================================
