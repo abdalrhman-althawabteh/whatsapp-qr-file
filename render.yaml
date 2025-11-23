@@ -7,7 +7,12 @@ services:
     name: whatsapp-manager
     env: node
     region: oregon  # أو singapore إذا كنت في آسيا
-    plan: free  # أو starter للـ $7/month
+    plan: starter  # أو starter للـ $7/month
+    disk:
+      name: whatsapp-sessions
+      mountPath: /opt/render/project/src/.wwebjs_auth
+      sizeGB: 1
+
     
     # Build Settings
     buildCommand: npm install
