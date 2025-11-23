@@ -129,6 +129,10 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 
 // Tell Express to serve files from the "public" folder
 app.use(express.static('public'));
+// Redirect root to login
+app.get('/', (req, res) => {
+    res.redirect('/login.html');
+});
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
