@@ -376,34 +376,55 @@ async function getWhatsAppClient(userId) {
     });
     
     // EVENT: New message - Send to webhook!
-    client.on('message', async (message) => {
-        console.log(`📩 New message for user ${userId} from:`, message.from);
+client.on('message', async (message) => {
+    console.log(`📩 New message for user ${userId} from:`, message.from);
+    
+    await loadChatsForUser(userId, client);
+    
+    // Send to webhook if configured
+    const webhookUrl = userWebhooks.get(userId);
+    if (webhookUrl) {
+        const webhookData = {
+            event: 'message_received',
+            timestamp: new Date().toISOString(),
+            data: {
+                id: message.id._serialized,
+                from: message.from,
+                to: message.to,
+                body: message.body,
+                timestamp: message.timestamp,
+                fromMe: message.fromMe,
+                hasMedia: message.hasMedia,
+                isGroup: message.isGroup,
+                author: message.author,
+                chatName: message._data.notifyName || 'Unknown'
+            }
+        };
         
-        await loadChatsForUser(userId, client);
-        
-        // Send to webhook if configured
-        const webhookUrl = userWebhooks.get(userId);
-        if (webhookUrl) {
-            const webhookData = {
-                event: 'message_received',
-                timestamp: new Date().toISOString(),
-                data: {
-                    id: message.id._serialized,
-                    from: message.from,
-                    to: message.to,
-                    body: message.body,
-                    timestamp: message.timestamp,
-                    fromMe: message.fromMe,
-                    hasMedia: message.hasMedia,
-                    isGroup: message.isGroup,
-                    author: message.author,
-                    chatName: message._data.notifyName || 'Unknown'
+        // ✅ NEW: Download and send media if present
+        if (message.hasMedia) {
+            try {
+                console.log(`📎 Downloading media for webhook...`);
+                const media = await message.downloadMedia();
+                
+                if (media) {
+                    webhookData.data.media = {
+                        mimetype: media.mimetype,
+                        data: media.data, // Base64 string
+                        filename: media.filename || 'file',
+                        filesize: media.filesize
+                    };
+                    console.log(`✅ Media downloaded: ${media.mimetype}, size: ${media.filesize || 'unknown'} bytes`);
                 }
-            };
-            
-            await sendToWebhook(userId, webhookData);
+            } catch (error) {
+                console.error(`❌ Failed to download media: ${error.message}`);
+                webhookData.data.mediaError = error.message;
+            }
         }
-    });
+        
+        await sendToWebhook(userId, webhookData);
+    }
+});
     
     // EVENT: Disconnected
     client.on('disconnected', async (reason) => {
@@ -904,18 +925,15 @@ app.post('/webhook/send/:userId',
             .trim()
             .notEmpty().withMessage('Recipient is required')
             .matches(/^[\d\-]+(@[cg]\.us)?$/).withMessage('Invalid phone number format'),
-        body('message')
-            .trim()
-            .notEmpty().withMessage('Message cannot be empty')
-            .isLength({ max: 4096 }).withMessage('Message too long (max 4096 chars)'),
         body('secret')
             .notEmpty().withMessage('Secret is required')
+        // ✅ REMOVED: message validation (now optional)
     ],
     validate,
     async (req, res) => {
     try {
         const userId = req.params.userId;
-        const { to, message, secret } = req.body;
+        const { to, message, media, secret } = req.body; // ✅ Added media
         
         console.log(`📥 Incoming webhook request for user: ${userId}`);
         
@@ -940,13 +958,6 @@ app.post('/webhook/send/:userId',
             });
         }
         
-        if (!to || !message) {
-            return res.status(400).json({
-                success: false,
-                error: 'Required fields: to, message, secret'
-            });
-        }
-        
         const client = whatsappClients.get(userId);
         
         if (!client) {
@@ -959,23 +970,69 @@ app.post('/webhook/send/:userId',
         // Format phone number if needed
         const chatId = to.includes('@') ? to : `${to}@c.us`;
         
-        await client.sendMessage(chatId, message);
-        
-        console.log(`✅ Message sent via webhook for user ${userId}`);
-        
-        // Log webhook call
-        await supabase.from('webhook_logs').insert({
-            user_id: userId,
-            direction: 'outgoing',
-            status: 'success',
-            payload: { to, message }
-        });
-        
-        res.json({
-            success: true,
-            message: 'Message sent successfully',
-            to: chatId
-        });
+        // ✅ NEW: Check if media is provided
+        if (media && media.data && media.mimetype) {
+            console.log(`📤 Sending media via webhook: ${media.mimetype}`);
+            
+            try {
+                // Create MessageMedia object
+                const messageMedia = new MessageMedia(
+                    media.mimetype,
+                    media.data, // Base64 string
+                    media.filename || 'file'
+                );
+                
+                // Send with optional caption
+                await client.sendMessage(chatId, messageMedia, {
+                    caption: message || ''
+                });
+                
+                console.log(`✅ Media sent via webhook for user ${userId}`);
+                
+                // Log webhook call
+                await supabase.from('webhook_logs').insert({
+                    user_id: userId,
+                    direction: 'outgoing',
+                    status: 'success',
+                    payload: { to, hasMedia: true, mimetype: media.mimetype }
+                });
+                
+                return res.json({
+                    success: true,
+                    message: 'Media sent successfully',
+                    to: chatId
+                });
+            } catch (error) {
+                console.error(`❌ Error sending media:`, error);
+                return res.status(500).json({
+                    success: false,
+                    error: 'Failed to send media: ' + error.message
+                });
+            }
+        } else if (message) {
+            // Send text message
+            await client.sendMessage(chatId, message);
+            console.log(`✅ Text message sent via webhook for user ${userId}`);
+            
+            // Log webhook call
+            await supabase.from('webhook_logs').insert({
+                user_id: userId,
+                direction: 'outgoing',
+                status: 'success',
+                payload: { to, message }
+            });
+            
+            return res.json({
+                success: true,
+                message: 'Message sent successfully',
+                to: chatId
+            });
+        } else {
+            return res.status(400).json({
+                success: false,
+                error: 'Either message or media is required'
+            });
+        }
     } catch (error) {
         console.error('❌ Webhook send error:', error);
         res.status(500).json({
