@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Settings - WhatsApp Manager</title>
     <link rel="stylesheet" href="navigation.css">
+    <link rel="stylesheet" href="modal.css">
     <style>
         body {
             margin: 0;
@@ -194,6 +195,9 @@
         </div>
     </div>
 
+    <!-- Modal System -->
+    <script src="modal.js"></script>
+
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
@@ -222,36 +226,76 @@
         }
 
         window.disconnectWhatsApp = async function() {
-            if (confirm('Are you sure you want to disconnect WhatsApp? You will need to scan the QR code again.')) {
-                try {
-                    await fetch('/logout-whatsapp', {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${currentSession.access_token}`
+            showConfirm({
+                title: '🔌 Disconnect WhatsApp',
+                message: 'Are you sure you want to disconnect WhatsApp?<br><br><strong>You will need to scan the QR code again to reconnect.</strong>',
+                type: 'warning',
+                confirmText: 'Yes, Disconnect',
+                confirmType: 'warning',
+                cancelText: 'Cancel',
+                onConfirm: async () => {
+                    try {
+                        showLoading('Disconnecting WhatsApp...');
+                        
+                        const response = await fetch('/logout-whatsapp', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${currentSession.access_token}`
+                            }
+                        });
+                        
+                        const data = await response.json();
+                        
+                        hideLoading();
+                        
+                        if (data.success) {
+                            showSuccess('WhatsApp disconnected successfully! Redirecting...', 'Disconnected');
+                            
+                            setTimeout(() => {
+                                window.location.href = '/dashboard.html';
+                            }, 2000);
+                        } else {
+                            showError(data.error || 'Failed to disconnect WhatsApp');
                         }
-                    });
-                    
-                    alert('✅ WhatsApp disconnected successfully!');
-                    window.location.href = '/dashboard.html';
-                } catch (error) {
-                    console.error('Error disconnecting WhatsApp:', error);
-                    alert('❌ Error disconnecting WhatsApp');
+                    } catch (error) {
+                        hideLoading();
+                        console.error('Error disconnecting WhatsApp:', error);
+                        showError('An error occurred while disconnecting WhatsApp');
+                    }
                 }
-            }
+            });
         };
 
         window.logout = async function() {
-            if (confirm('Are you sure you want to logout from the website?\n\nYour WhatsApp will remain connected.')) {
-                try {
-                    // Just logout from Supabase - DON'T disconnect WhatsApp!
-                    await supabase.auth.signOut();
-                    window.location.href = '/login.html';
-                } catch (error) {
-                    console.error('Error logging out:', error);
-                    await supabase.auth.signOut();
-                    window.location.href = '/login.html';
+            showConfirm({
+                title: '🚪 Logout from Account',
+                message: 'Are you sure you want to logout?<br><br><strong>Note:</strong> Your WhatsApp will remain connected.',
+                type: 'info',
+                confirmText: 'Yes, Logout',
+                confirmType: 'danger',
+                cancelText: 'Cancel',
+                onConfirm: async () => {
+                    try {
+                        showLoading('Logging out...');
+                        
+                        await supabase.auth.signOut();
+                        
+                        hideLoading();
+                        showSuccess('Logged out successfully! Redirecting...', 'Goodbye');
+                        
+                        setTimeout(() => {
+                            window.location.href = '/login.html';
+                        }, 1500);
+                    } catch (error) {
+                        hideLoading();
+                        console.error('Error logging out:', error);
+                        
+                        // Force logout even if error
+                        await supabase.auth.signOut();
+                        window.location.href = '/login.html';
+                    }
                 }
-            }
+            });
         };
 
         init();

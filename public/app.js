@@ -103,16 +103,15 @@ let currentChatId = null;
 let lastMessageCount = 0;
 let isLoadingMessages = false;
 let selectedFile = null;
-let lastMessagesHash = ''; // ✅ NEW: Track messages by hash instead of count
+let lastMessagesHash = '';
 
 // Max file size: 64MB
 const MAX_FILE_SIZE = 64 * 1024 * 1024;
 const BLOCKED_FORMATS = ['.heic', '.heif'];
 
-// ✅ NEW: Helper to generate hash for messages
+// Helper to generate hash for messages
 function hashMessages(messages) {
     if (!messages || messages.length === 0) return '';
-    // Create a simple hash from last 5 messages IDs
     return messages.slice(-5).map(m => m.id?._serialized || m.timestamp).join('|');
 }
 
@@ -224,7 +223,7 @@ async function openChat(chatId, chatName) {
     currentChatId = chatId;
     chatNameElement.textContent = chatName;
     lastMessageCount = 0;
-    lastMessagesHash = ''; // ✅ Reset hash
+    lastMessagesHash = '';
 
     welcome.style.display = 'none';
     chatView.style.display = 'flex';
@@ -253,7 +252,6 @@ async function loadMessages(chatId, forceReload = false) {
         if (data.messages) {
             const currentCount = data.messages.length;
             
-            // ✅ Simple: Update if count changed OR force reload
             if (forceReload || currentCount !== lastMessageCount) {
                 console.log(`📨 Messages changed: ${lastMessageCount} → ${currentCount}`);
                 lastMessageCount = currentCount;
@@ -272,9 +270,7 @@ async function loadMessages(chatId, forceReload = false) {
     }
 }
 
-// ✅ IMPROVED: Better scroll behavior
 function displayMessages(messages) {
-    // Check if user was at bottom (within 50px)
     const wasAtBottom = (messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight) < 50;
     
     messagesContainer.innerHTML = '';
@@ -308,7 +304,6 @@ function displayMessages(messages) {
         messagesContainer.appendChild(messageDiv);
     });
 
-    // ✅ Only scroll if user was at bottom or if new messages arrived
     if (wasAtBottom) {
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
@@ -340,7 +335,7 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// ✅ IMPROVED: Send message with immediate refresh
+// ✅ UPDATED: Send message with professional modals
 async function sendMessage() {
     const message = messageInput.value.trim();
     
@@ -363,19 +358,24 @@ async function sendMessage() {
         if (data.success) {
             messageInput.value = '';
             
-            // ✅ Immediately refresh messages
+            // ✅ Show success toast
+            showSuccess('Message sent successfully!', 'Sent');
+            
+            // Immediately refresh messages
             await loadMessages(currentChatId, true);
             
-            // ✅ Also refresh chats list to update last message
+            // Refresh chats list
             setTimeout(() => loadChats(), 500);
             
             console.log('✅ Message sent and UI updated');
         } else {
-            alert('Failed to send message');
+            // ✅ Show error with modal
+            showError(data.error || 'Failed to send message', 'Send Failed');
         }
     } catch (error) {
         console.error('Error sending message:', error);
-        alert('Error sending message');
+        // ✅ Show error toast
+        showError('An error occurred while sending the message', 'Error');
     } finally {
         messageInput.disabled = false;
         sendBtn.disabled = false;
@@ -383,7 +383,7 @@ async function sendMessage() {
     }
 }
 
-// Handle file selection
+// ✅ UPDATED: Handle file selection with professional modals
 if (attachBtn) {
     attachBtn.onclick = () => {
         fileInput.click();
@@ -398,13 +398,22 @@ if (fileInput) {
             const isBlocked = BLOCKED_FORMATS.some(format => fileName.endsWith(format));
             
             if (isBlocked) {
-                alert('⚠️ HEIC/HEIF format not supported!\n\nPlease convert your image to JPG or PNG first.');
+                // ✅ Professional warning modal
+                showWarning(
+                    'HEIC/HEIF format is not supported.<br><br><strong>Please convert your image to JPG or PNG first.</strong>',
+                    '⚠️ Unsupported Format'
+                );
                 fileInput.value = '';
                 return;
             }
             
             if (file.size > MAX_FILE_SIZE) {
-                alert(`⚠️ File too large!\n\nThe file is ${(file.size / 1024 / 1024).toFixed(2)} MB.\nMaximum size is 64 MB.\n\nPlease choose a smaller file.`);
+                const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+                // ✅ Professional warning modal
+                showWarning(
+                    `The file size is <strong>${fileSizeMB} MB</strong>.<br><br>Maximum allowed size is <strong>64 MB</strong>.<br><br>Please choose a smaller file.`,
+                    '⚠️ File Too Large'
+                );
                 fileInput.value = '';
                 return;
             }
@@ -455,14 +464,16 @@ if (cancelFileBtn) {
     };
 }
 
-// ✅ IMPROVED: Send file with immediate refresh
+// ✅ UPDATED: Send file with professional modals and loading
 if (sendFileBtn) {
     sendFileBtn.onclick = async () => {
         if (!selectedFile || !currentChatId) return;
         
         try {
+            // ✅ Show loading modal
+            showLoading('Sending file...');
+            
             sendFileBtn.disabled = true;
-            sendFileBtn.textContent = '⏳ Sending...';
             
             const reader = new FileReader();
             reader.onload = async (e) => {
@@ -483,34 +494,48 @@ if (sendFileBtn) {
                     
                     const data = await response.json();
                     
+                    // ✅ Hide loading
+                    hideLoading();
+                    
                     if (data.success) {
+                        // ✅ Show success toast
+                        showSuccess('File sent successfully!', 'Sent');
+                        
                         filePreview.style.display = 'none';
                         selectedFile = null;
                         fileInput.value = '';
                         
-                        // ✅ Immediately refresh messages
+                        // Immediately refresh messages
                         await loadMessages(currentChatId, true);
                         
-                        // ✅ Also refresh chats list
+                        // Refresh chats list
                         setTimeout(() => loadChats(), 500);
                         
                         console.log('✅ File sent and UI updated');
                     } else {
-                        alert(`❌ Failed to send file\n\nError: ${data.details || 'Unknown error'}`);
+                        // ✅ Show error modal
+                        showError(
+                            data.details || data.error || 'Unknown error occurred',
+                            '❌ Failed to Send File'
+                        );
                     }
                 } catch (error) {
-                    alert('❌ Error sending file: ' + error.message);
+                    hideLoading();
+                    console.error('Error sending file:', error);
+                    // ✅ Show error modal
+                    showError(error.message, 'Error Sending File');
                 } finally {
                     sendFileBtn.disabled = false;
-                    sendFileBtn.textContent = 'Send File 📤';
                 }
             };
             
             reader.readAsDataURL(selectedFile);
         } catch (error) {
-            alert('❌ Error: ' + error.message);
+            hideLoading();
+            console.error('Error:', error);
+            // ✅ Show error modal
+            showError(error.message, 'Error');
             sendFileBtn.disabled = false;
-            sendFileBtn.textContent = 'Send File 📤';
         }
     };
 }
@@ -530,33 +555,63 @@ if (messageInput) {
 
 if (refreshBtn) {
     refreshBtn.onclick = () => {
+        // ✅ Show loading toast
+        showInfo('Refreshing...', 'Please wait');
+        
         loadChats();
         if (currentChatId) {
             loadMessages(currentChatId, true);
         }
+        
+        // ✅ Show success after refresh
+        setTimeout(() => {
+            showSuccess('Refreshed successfully!', 'Done');
+        }, 1000);
     };
 }
 
-// Logout button
+// ✅ UPDATED: Logout with professional confirmation modal
 const logoutBtn = document.getElementById('logout-btn');
 if (logoutBtn) {
     logoutBtn.onclick = async () => {
-        if (confirm('Are you sure you want to logout?')) {
-            try {
-                // ✅ DON'T disconnect WhatsApp - just logout from website
-                await supabase.auth.signOut();
-                window.location.href = '/login.html';
-            } catch (error) {
-                console.error('Logout error:', error);
-                await supabase.auth.signOut();
-                window.location.href = '/login.html';
+        // ✅ Professional confirmation dialog
+        showConfirm({
+            title: '🚪 Logout',
+            message: 'Are you sure you want to logout?<br><br><strong>Note:</strong> Your WhatsApp will remain connected.',
+            type: 'info',
+            confirmText: 'Yes, Logout',
+            confirmType: 'danger',
+            cancelText: 'Cancel',
+            onConfirm: async () => {
+                try {
+                    // ✅ Show loading
+                    showLoading('Logging out...');
+                    
+                    await supabase.auth.signOut();
+                    
+                    hideLoading();
+                    
+                    // ✅ Show success
+                    showSuccess('Logged out successfully! Redirecting...', 'Goodbye');
+                    
+                    setTimeout(() => {
+                        window.location.href = '/login.html';
+                    }, 1500);
+                } catch (error) {
+                    hideLoading();
+                    console.error('Logout error:', error);
+                    
+                    // Force logout
+                    await supabase.auth.signOut();
+                    window.location.href = '/login.html';
+                }
             }
-        }
+        });
     };
 }
 
 // ============================================
-// AUTO-REFRESH SYSTEM (SIMPLIFIED)
+// AUTO-REFRESH SYSTEM
 // ============================================
 
 console.log('🔄 Auto-refresh system starting...');
