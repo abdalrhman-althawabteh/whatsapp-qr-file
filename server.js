@@ -30,6 +30,43 @@ process.on('uncaughtException', (error) => {
 });
 
 // ============================================
+// MEMORY OPTIMIZATION
+// ============================================
+
+const PUPPETEER_ARGS = [
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-dev-shm-usage',
+    '--disable-accelerated-2d-canvas',
+    '--no-first-run',
+    '--no-zygote',
+    '--disable-gpu',
+    '--disable-web-security',
+    '--disable-features=IsolateOrigins,site-per-process'
+];
+
+// Session Management
+const MAX_CONCURRENT_SESSIONS = 10; // For Starter plan (512MB)
+let activeSessionsCount = 0;
+
+// Memory Monitoring - Log every minute
+setInterval(() => {
+    const used = process.memoryUsage();
+    const mb = (bytes) => Math.round(bytes / 1024 / 1024);
+    
+    console.log(`📊 Memory Usage:
+    - RSS: ${mb(used.rss)}MB / 512MB (${Math.round(mb(used.rss)/512*100)}%)
+    - Heap Used: ${mb(used.heapUsed)}MB
+    - Active Sessions: ${activeSessionsCount}/${MAX_CONCURRENT_SESSIONS}
+    `);
+    
+    // Warning if high
+    if (mb(used.rss) > 400) {
+        console.warn('⚠️ Memory high! Consider cleanup or restart.');
+    }
+}, 60000); // Every minute
+
+// ============================================
 // SECURITY MIDDLEWARE
 // ============================================
 
@@ -92,7 +129,6 @@ const messageLimiter = rateLimit({
     message: 'Too many messages sent, please slow down',
     standardHeaders: true,
     legacyHeaders: false,
-    // لا تستخدم keyGenerator - دع المكتبة تتعامل مع IPv6 بشكل صحيح
 });
 
 // 4. Webhook rate limiter
@@ -109,8 +145,8 @@ const webhookLimiter = rateLimit({
 // ============================================
 
 // Initialize Supabase
-const SUPABASE_URL = process.env.SUPABASE_URL; // Your project URL
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY; // ⚠️ Paste your service_role key here!
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 // Validate environment variables
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
@@ -129,10 +165,12 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 
 // Tell Express to serve files from the "public" folder
 app.use(express.static('public'));
+
 // Redirect root to login
 app.get('/', (req, res) => {
     res.redirect('/login.html');
 });
+
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
@@ -145,6 +183,27 @@ app.get('/api/config', (req, res) => {
     res.json({
         supabaseUrl: SUPABASE_URL,
         supabaseAnonKey: process.env.SUPABASE_ANON_KEY
+    });
+});
+
+// Health Check Endpoint
+app.get('/health', (req, res) => {
+    const used = process.memoryUsage();
+    const mb = (bytes) => Math.round(bytes / 1024 / 1024);
+    
+    res.json({
+        status: 'healthy',
+        uptime: Math.round(process.uptime()),
+        memory: {
+            used: mb(used.rss),
+            limit: 512,
+            percentage: Math.round(mb(used.rss)/512*100)
+        },
+        sessions: {
+            active: activeSessionsCount,
+            max: MAX_CONCURRENT_SESSIONS
+        },
+        timestamp: new Date().toISOString()
     });
 });
 
@@ -229,28 +288,41 @@ async function sendToWebhook(userId, webhookData) {
 
 // Function to get or create WhatsApp client for a user
 async function getWhatsAppClient(userId) {
+    // Check if already exists
     if (whatsappClients.has(userId)) {
         return whatsappClients.get(userId);
     }
     
+    // Check session limit
+    if (activeSessionsCount >= MAX_CONCURRENT_SESSIONS) {
+        throw new Error(`Server at capacity (${activeSessionsCount}/${MAX_CONCURRENT_SESSIONS} sessions). Please try again later.`);
+    }
+    
     console.log(`📱 Creating new WhatsApp client for user: ${userId}`);
     
+    // Create client with optimized settings
     const client = new Client({
-    authStrategy: new LocalAuth({ 
-        clientId: userId,
-        dataPath: './.wwebjs_auth'  // مجلد محلي لحفظ sessions
-    }),
-    puppeteer: {
-        headless: true,
-        args: ['--no-sandbox']
-    }
-});
+        authStrategy: new LocalAuth({
+            clientId: userId,  // ✅ FIXED: Use userId not session.user.id
+            dataPath: './.wwebjs_auth/'
+        }),
+        puppeteer: {
+            headless: true,
+            args: PUPPETEER_ARGS,
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
+        }
+    });
     
+    // Initialize state
     clientStates.set(userId, {
         qr: '',
         ready: false,
         chats: []
     });
+    
+    // Increment session counter
+    activeSessionsCount++;
+    console.log(`📈 Active sessions: ${activeSessionsCount}/${MAX_CONCURRENT_SESSIONS}`);
     
     // Load webhook configuration from database
     const { data: session } = await supabase
@@ -274,6 +346,16 @@ async function getWhatsAppClient(userId) {
         state.ready = false;
     });
     
+    // EVENT: Authenticated (session restored)
+    client.on('authenticated', () => {
+        console.log(`🔐 Session authenticated for user: ${userId}`);
+    });
+
+    // EVENT: Auth Failure
+    client.on('auth_failure', (msg) => {
+        console.log(`❌ Auth failure for user ${userId}:`, msg);
+    });
+    
     // EVENT: Ready
     client.on('ready', async () => {
         console.log(`✅ WhatsApp connected for user: ${userId}`);
@@ -291,17 +373,6 @@ async function getWhatsAppClient(userId) {
                 is_connected: true,
                 updated_at: new Date().toISOString()
             });
-    });
-
-    // ✅ أضف handler جديد:
-    client.on('authenticated', (session) => {
-        console.log(`🔐 Session authenticated for user: ${userId}`);
-        // Session restored successfully - no QR needed!
-    });
-
-    client.on('auth_failure', (msg) => {
-        console.log(`❌ Auth failure for user ${userId}:`, msg);
-        // Session expired or invalid - will show QR code
     });
     
     // EVENT: New message - Send to webhook!
@@ -335,53 +406,38 @@ async function getWhatsAppClient(userId) {
     });
     
     // EVENT: Disconnected
-    client.on('disconnected', async () => {
-        console.log(`🔌 WhatsApp disconnected for user: ${userId}`);
+    client.on('disconnected', async (reason) => {
+        console.log(`🔌 WhatsApp disconnected for user: ${userId}, reason:`, reason);
         
         const state = clientStates.get(userId);
-        state.ready = false;
-        state.chats = [];
+        if (state) {
+            state.ready = false;
+            state.chats = [];
+        }
         
-        await supabase
-            .from('whatsapp_sessions')
-            .update({
-                is_connected: false,
-                updated_at: new Date().toISOString()
-            })
-            .eq('user_id', userId);
-    });
-    
-    client.on('auth_failure', () => {
-        console.log(`❌ Authentication failed for user: ${userId}`);
+        // Decrement session counter
+        activeSessionsCount--;
+        console.log(`📉 Active sessions: ${activeSessionsCount}/${MAX_CONCURRENT_SESSIONS}`);
+        
+        try {
+            await supabase
+                .from('whatsapp_sessions')
+                .update({
+                    is_connected: false,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('user_id', userId);
+        } catch (err) {
+            console.error('⚠️ DB update error (ignored):', err.message);
+        }
     });
 
+    // EVENT: Error
     client.on('error', (error) => {
-    console.error(`⚠️ Client error for user ${userId}:`, error.message);
-    // Don't crash - just log
-});
-
-client.on('disconnected', async (reason) => {
-    console.log(`🔌 WhatsApp disconnected for user: ${userId}, reason:`, reason);
-    
-    const state = clientStates.get(userId);
-    if (state) {
-        state.ready = false;
-        state.chats = [];
-    }
-    
-    try {
-        await supabase
-            .from('whatsapp_sessions')
-            .update({
-                is_connected: false,
-                updated_at: new Date().toISOString()
-            })
-            .eq('user_id', userId);
-    } catch (err) {
-        console.error('⚠️ DB update error (ignored):', err.message);
-    }
+        console.error(`⚠️ Client error for user ${userId}:`, error.message);
     });
     
+    // Initialize client
     client.initialize();
     whatsappClients.set(userId, client);
 
@@ -422,14 +478,56 @@ async function loadChatsForUser(userId, client) {
 }
 
 // ============================================
+// SESSION CLEANUP (runs every hour)
+// ============================================
+
+setInterval(async () => {
+    console.log('🧹 Running session cleanup...');
+    
+    for (const [userId, client] of whatsappClients.entries()) {
+        try {
+            const state = await client.getState();
+            
+            if (state !== 'CONNECTED') {
+                console.log(`Removing disconnected session: ${userId}`);
+                await client.destroy();
+                whatsappClients.delete(userId);
+                clientStates.delete(userId);
+                activeSessionsCount--;
+            }
+        } catch (error) {
+            console.error(`Error checking session ${userId}:`, error.message);
+            // If error checking, assume dead
+            whatsappClients.delete(userId);
+            clientStates.delete(userId);
+            activeSessionsCount--;
+        }
+    }
+    
+    console.log(`✅ Cleanup done. Active sessions: ${activeSessionsCount}/${MAX_CONCURRENT_SESSIONS}`);
+}, 60 * 60 * 1000); // Every hour
+
+// ============================================
 // AUTHENTICATED ENDPOINTS
 // ============================================
 
 app.get('/qr', authenticateUser, async (req, res) => {
-    const userId = req.user.id;
-    await getWhatsAppClient(userId);
-    const state = clientStates.get(userId) || { qr: '', ready: false };
-    res.json({ qr: state.qr, ready: state.ready });
+    try {
+        const userId = req.user.id;
+        await getWhatsAppClient(userId);
+        const state = clientStates.get(userId) || { qr: '', ready: false };
+        res.json({ qr: state.qr, ready: state.ready });
+    } catch (error) {
+        if (error.message.includes('at capacity')) {
+            res.status(503).json({ 
+                error: error.message,
+                active: activeSessionsCount,
+                max: MAX_CONCURRENT_SESSIONS
+            });
+        } else {
+            res.status(500).json({ error: error.message });
+        }
+    }
 });
 
 app.get('/chats', authenticateUser, async (req, res) => {
@@ -492,7 +590,7 @@ app.get('/messages/:chatId', authenticateUser, async (req, res) => {
 
 app.post('/send-message', 
     authenticateUser, 
-    messageLimiter, // استخدم الـ limiter الخاص بالرسائل
+    messageLimiter,
     [
         body('chatId')
             .trim()
@@ -566,7 +664,6 @@ app.post('/send-media', authenticateUser, async (req, res) => {
     }
 });
 
-// ✅ عدّل الـ endpoint بالكامل
 app.post('/logout-whatsapp', authenticateUser, async (req, res) => {
     try {
         const userId = req.user.id;
@@ -575,7 +672,7 @@ app.post('/logout-whatsapp', authenticateUser, async (req, res) => {
         if (client) {
             console.log(`🔌 Disconnecting WhatsApp for user: ${userId}`);
             
-            // Step 1: Logout from WhatsApp (keeps session files)
+            // Step 1: Logout from WhatsApp
             try {
                 await client.logout();
             } catch (logoutErr) {
@@ -586,6 +683,7 @@ app.post('/logout-whatsapp', authenticateUser, async (req, res) => {
             whatsappClients.delete(userId);
             clientStates.delete(userId);
             userWebhooks.delete(userId);
+            activeSessionsCount--;
             
             // Step 3: Update database status
             await supabase
@@ -607,6 +705,7 @@ app.post('/logout-whatsapp', authenticateUser, async (req, res) => {
             }, 2000);
             
             console.log(`✅ WhatsApp disconnected for: ${userId}`);
+            console.log(`📉 Active sessions: ${activeSessionsCount}/${MAX_CONCURRENT_SESSIONS}`);
         }
         
         res.json({ 
@@ -649,7 +748,7 @@ app.get('/webhook/config', authenticateUser, async (req, res) => {
             .from('whatsapp_sessions')
             .select('webhook_url, webhook_enabled, webhook_secret')
             .eq('user_id', userId)
-            .maybeSingle(); // Use maybeSingle instead of single to avoid error if not found
+            .maybeSingle();
         
         if (error) {
             console.error('Database error:', error);
@@ -673,7 +772,6 @@ app.get('/webhook/config', authenticateUser, async (req, res) => {
         });
     }
 });
-
 
 // Update webhook configuration
 app.post('/webhook/config', 
@@ -749,13 +847,11 @@ app.post('/webhook/config',
             console.log(`🔕 Webhook disabled for user ${userId}`);
         }
         
-        // Only return secret when webhook is enabled and URL provided
         const response = {
             success: true,
             message: 'Webhook configured successfully'
         };
         
-        // Return secret only when first enabling webhook
         if (webhook_enabled && webhook_url) {
             response.webhook_secret = webhook_secret;
             response.note = '⚠️ Save this secret! You will not see it again.';
@@ -764,8 +860,6 @@ app.post('/webhook/config',
         res.json(response);
     } catch (error) {
         console.error('❌ Error configuring webhook:', error);
-        console.error('Error details:', error.message);
-        console.error('Error stack:', error.stack);
         res.status(500).json({ 
             error: 'Failed to configure webhook',
             details: error.message 
@@ -801,7 +895,6 @@ app.post('/webhook/test', authenticateUser, async (req, res) => {
 // PUBLIC WEBHOOK ENDPOINT (for sending messages)
 // ============================================
 
-// Send message via webhook (public endpoint with user ID in URL)
 app.post('/webhook/send/:userId', 
     webhookLimiter,
     [
@@ -944,12 +1037,6 @@ const server = app.listen(PORT, () => {
     console.log(`📱 Multi-user WhatsApp Manager ready!`);
     console.log(`🔐 Authentication: Enabled`);
     console.log(`🔗 Webhooks: Enabled`);
+    console.log(`📊 Max Concurrent Sessions: ${MAX_CONCURRENT_SESSIONS}`);
+    console.log(`💾 Persistent Storage: ${process.env.NODE_ENV === 'production' ? 'Enabled' : 'Local'}`);
 });
-
-// Start the server
-// app.listen(PORT, () => {
-//     console.log(`🚀 Server is running on http://localhost:${PORT}`);
-//     console.log(`📱 Multi-user WhatsApp Manager ready!`);
-//     console.log(`🔐 Authentication: Enabled`);
-//     console.log(`🔗 Webhooks: Enabled`);
-// });
